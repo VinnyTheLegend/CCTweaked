@@ -4,6 +4,7 @@ use `wget` to download (http might have to be enabled in your CC:Tweaked setting
 `wget <url> <filename>`
 OR
 `wget run <url>`
+
 ---
 ## MONITOR DIMENSIONS
 
