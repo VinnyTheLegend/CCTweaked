@@ -10,7 +10,7 @@ OR
 
 #### CREATE MONITOR
 This one is wireless and accepts data from an expandable amount of modems. Requires basic coding knowledge and minor editing of the script to get running. Too lazy to make it more user friendly.
-3x2
+3x (total sources * 2)
 
 #### FISSION REACTOR
 2x1
