@@ -69,7 +69,7 @@ while true do
     Monitor.setCursorPos(1,3)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("Production: " .. round(production) .. " FE/t")
+    Monitor.write("Production: " .. round(production * 0.4) .. " FE/t")
 
     local steampercent = Turbine.getSteamFilledPercentage()
     Monitor.setCursorPos(1,4)
