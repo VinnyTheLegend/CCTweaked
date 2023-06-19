@@ -9,8 +9,12 @@ OR
 ## MONITOR DIMENSIONS
 
 #### CREATE MONITOR
-This one is wireless and accepts data from an expandable amount of modems. Requires basic coding knowledge and minor editing of the script to get running. Too lazy to make it more user friendly.
+This one is wireless and accepts data from an expandable amount of modems. Connect a Digital Adapter to a Stressometer, and then to a computer with a wirless modem.
+- transmitter id determines the order they are displayed on the monitor
+- delete /data/config.txt to reset config
+- transmitter automatically copies itself to startup
 
+Monitor:  
 3x (total sources / 2)
 
 #### FISSION REACTOR
