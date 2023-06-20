@@ -73,28 +73,110 @@ function pwr (val, type)
     return string.format('%s%s%s%s', pre, round(val), suf, type)
 end
 
--- Auto-detects sides
-for _, side in pairs(peripheral.getNames()) do
-    if 'monitor' == peripheral.getType(side) then
-        Monitor = peripheral.wrap(side)
+function Listen(target)
+    local event, side, channel, replyChannel, message, distance
+    repeat
+        event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
+    until channel == 50
+    print(textutils.formatTime(os.time("local")) .. " message recieved")
+    return message
+end
+
+
+function Startup()
+    if not fs.exists('/startup.lua') then
+        fs.copy('/fusion.lua', '/startup.lua')
     end
-    if 'fusionReactorLogicAdapter' == peripheral.getType(side) then
-        Reactor = peripheral.wrap(side)
+end
+
+function SaveConfig(data)
+    if not fs.exists('/data/config.txt') then
+        fs.makeDir('/data')
+    end
+    local f = fs.open('/data/config.txt', 'w')
+    f.write(textutils.serialize(data))
+    f.close()
+end
+ 
+function LoadConfig()
+    local data = nil
+    if fs.exists('/data/config.txt') then
+        print('config found')
+        local file = fs.open('/data/config.txt', 'r')
+        os.sleep(0.1)
+        local text = file.readAll()
+        os.sleep(0.1)
+        data = textutils.unserialize(text)
+        file.close()
+    else
+        print('config not found')
+    end
+    return data
+end
+
+if not fs.exists('/data/config.txt') then
+    local data = {}
+    local input
+    while input ~= 1 and input ~= 2 do
+        print("transmitter or reciever?")
+        print("1. transmitter")
+        print("2. reciever")
+        write("selection: ")
+        input = tonumber(read())
+        os.sleep(0.25)
+    end
+    if input == 1 then
+        data.Reciever = false
+    elseif input == 2 then
+        data.Reciever = true
+    end
+    SaveConfig(data)
+end
+
+Startup()
+Config = LoadConfig()
+Reciever = Config.Reciever
+
+if Reciever == true then
+    Reactor = true
+end
+
+-- Auto-detects sides
+while Reactor == nil or Modem == nil do
+    for _, side in pairs(peripheral.getNames()) do
+        if 'monitor' == peripheral.getType(side) then
+            Monitor = peripheral.wrap(side)
+        end
+        if 'fusionReactorLogicAdapter' == peripheral.getType(side) then
+            Reactor = peripheral.wrap(side)
+        end
+        if 'modem' == peripheral.getType(side) then
+            Modem = peripheral.wrap(side)
+            print('modem found')
+        end
     end
 end
 
 
+print("starting monitor")
+Modem.open(50)
 Monitor.clear()
-
+Data = {}
 while true do
-    local cooled = Reactor.isActiveCooledLogic() --true or false
-    local burnrate = Reactor.getInjectionRate()
-    local tritiumpercent = round(Reactor.getTritiumFilledPercentage() * 100)
-    local deuteriumpercent = round(Reactor.getDeuteriumFilledPercentage() * 100)
-    local dtfuelpercent = round(Reactor.getDTFuelFilledPercentage() * 100)
-    local productionrate = round(Reactor.getProductionRate() * 0.4)
-    local plasmatemp = round(Reactor.getPlasmaTemperature())
-    local casingtemp = round(Reactor.getCaseTemperature())
+    if Reciever == false then
+        Data.cooled = Reactor.isActiveCooledLogic() --true or false
+        Data.burnrate = Reactor.getInjectionRate()
+        Data.tritiumpercent = round(Reactor.getTritiumFilledPercentage() * 100)
+        Data.deuteriumpercent = round(Reactor.getDeuteriumFilledPercentage() * 100)
+        Data.dtfuelpercent = round(Reactor.getDTFuelFilledPercentage() * 100)
+        Data.productionrate = round(Reactor.getProductionRate() * 0.4)
+        Data.plasmatemp = round(Reactor.getPlasmaTemperature())
+        Data.casingtemp = round(Reactor.getCaseTemperature())
+        Modem.transmit(50, 51, Data)
+        print(textutils.formatTime(os.time("local")) .. " message sent")
+    else
+        Data = Listen(50)
+    end
 
     Monitor.setCursorPos(1,1)
     os.sleep(0.25)
@@ -108,29 +190,29 @@ while true do
     end
     Monitor.setCursorPos(8,1)
     Monitor.setTextColor(1)
-    Monitor.write(" Rate: " .. burnrate)
+    Monitor.write(" Rate: " .. Data.burnrate)
 
     Monitor.setCursorPos(1,2)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("Prod.: " .. pwr(productionrate))
+    Monitor.write("Prod.: " .. pwr(Data.productionrate))
 
     Monitor.setCursorPos(1,3)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("Plasma: " .. pwr(plasmatemp, "temp"))
+    Monitor.write("Plasma: " .. pwr(Data.plasmatemp, "temp"))
 
     Monitor.setCursorPos(1,4)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("Casing: " .. pwr(casingtemp, "temp"))
+    Monitor.write("Casing: " .. pwr(Data.casingtemp, "temp"))
 
     Monitor.setTextColor(1)
     Monitor.setCursorPos(1,7)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("DT Fuel: " .. dtfuelpercent .. "%")
-    local dtbarval = (dtfuelpercent / 100) * 18
+    Monitor.write("DT Fuel: " .. Data.dtfuelpercent .. "%")
+    local dtbarval = (Data.dtfuelpercent / 100) * 18
     drawBar(1, 18, 8, 1, 256)
     drawBar(1, dtbarval, 8, 1, 8)
 
@@ -138,16 +220,16 @@ while true do
     Monitor.setCursorPos(1,9)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("Tritium: " .. tritiumpercent .. "%")
-    local tbarval = (tritiumpercent / 100) * 18
+    Monitor.write("Tritium: " .. Data.tritiumpercent .. "%")
+    local tbarval = (Data.tritiumpercent / 100) * 18
     drawBar(1, 18, 10, 1, 256)
     drawBar(1, tbarval, 10, 1, 32)
 
     Monitor.setCursorPos(1,11)
     os.sleep(0.25)
     Monitor.clearLine()
-    Monitor.write("Deuterium: " .. deuteriumpercent .. "%")
-    local dbarval = (deuteriumpercent / 100) * 18
+    Monitor.write("Deuterium: " .. Data.deuteriumpercent .. "%")
+    local dbarval = (Data.deuteriumpercent / 100) * 18
     drawBar(1, 18, 12, 1, 256)
     drawBar(1, dbarval, 12, 1, 16384)
 
